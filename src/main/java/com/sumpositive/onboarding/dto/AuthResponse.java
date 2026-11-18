@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class AuthResponse {
 
-    private String accessToken;
+	private String accessToken;
 
     private String tokenType;
 
@@ -19,4 +19,6 @@ public class AuthResponse {
     private String email;
 
     private long expiresIn;
+
+    private String role;
 }

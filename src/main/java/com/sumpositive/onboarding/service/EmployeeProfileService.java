@@ -17,108 +17,95 @@ import com.sumpositive.onboarding.repository.EmployeeProfileRepository;
 import com.sumpositive.onboarding.repository.OnboardingStepRepository;
 import com.sumpositive.onboarding.repository.UserRepository;
 
-
 @Service
 public class EmployeeProfileService {
-	
-	
-	private final UserRepository userRepository;
-	
-	private final EmployeeProfileRepository employeeRepository;
-	private final OnboardingStepRepository stepRepository;
-	
-	
-	public EmployeeProfileService(
-	        EmployeeProfileRepository profileRepository,
-	        UserRepository userRepository,
-	        OnboardingStepRepository stepRepository) {
 
-	    this.employeeRepository = profileRepository;
-	    this.userRepository = userRepository;
-	    this.stepRepository = stepRepository;
-	}
-	
-	
-	@Transactional
-	public EmployeeProfileResponse  saveProfile(Long userId, EmployeeProfileRequest profileRequest ) {
-		
-		         
-		           User user=userRepository.findById(userId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND,"user not found"));
-		           
-		           if(employeeRepository.findByUserId(userId).isPresent()) {
-		        	   
-		        	   throw new ResponseStatusException(HttpStatus.CONFLICT,"Profile already exists");
-		           }
-		           
-		           EmployeeProfile profile =new EmployeeProfile();
-		           
-		           profile.setUser(user);
-		           profile.setFirstName(profileRequest.getFirstName());
-		           profile.setLastName(profileRequest.getLastName());
-		           profile.setAddress(profileRequest.getAddress());
-		           profile.setDateOfBirth(profileRequest.getDateOfBirth());
-		           profile.setEmergencyContactName(profileRequest.getEmergencyContactName());
-		           profile.setEmergencyContactNumber(profileRequest.getEmergencyContactNumber());
-		           profile.setPersonalEmail(profileRequest.getPersonalEmail());
-		           profile.setPhoneNumber(profileRequest.getPhoneNumber());
-		           profile.setEmergencyContactRelationship(profileRequest.getEmergencyContactRelationship());
-		           
-		           
-		           EmployeeProfile saved = employeeRepository.save(profile);
+    private final UserRepository userRepository;
+    private final EmployeeProfileRepository employeeRepository;
+    private final OnboardingStepRepository stepRepository;
+    private final OnboardingCompletionService completionService;
 
-		           OnboardingStep step = stepRepository
-		                   .findByUserIdAndStepType(
-		                           userId,
-		                           OnboardingStepType.PROFILE)
-		                   .orElseThrow(() -> new ResponseStatusException(
-		                           HttpStatus.NOT_FOUND,
-		                           "Profile onboarding step not found"));
+    public EmployeeProfileService(
+            EmployeeProfileRepository profileRepository,
+            UserRepository userRepository,
+            OnboardingStepRepository stepRepository,
+            OnboardingCompletionService completionService) {
 
-		           step.setCompleted(true);
-		           step.setCompletedAt(LocalDateTime.now());
+        this.employeeRepository = profileRepository;
+        this.userRepository = userRepository;
+        this.stepRepository = stepRepository;
+        this.completionService = completionService;
+    }
 
-		           stepRepository.save(step);
+    @Transactional
+    public EmployeeProfileResponse saveProfile(Long userId, EmployeeProfileRequest profileRequest) {
 
-		           return mapToResponse(saved);   
-		           
-		           
-	}
-	
-	
-	@Transactional(readOnly=true)
-	public EmployeeProfileResponse getProfile(Long userId) {
-		
-		
-		EmployeeProfile empprofile= employeeRepository.findByUserId(userId).orElseThrow(()->  new ResponseStatusException( HttpStatus.NOT_FOUND,"User not Found"));
-		
-		
-		return mapToResponse(empprofile);
-		
-		
-	}
-	
-	private EmployeeProfileResponse mapToResponse(EmployeeProfile empPro) {
-		
-		
-		   EmployeeProfileResponse empresponse= new EmployeeProfileResponse();
-		   
-		   empresponse.setFirstName(empPro.getFirstName());
-		   empresponse.setLastName(empPro.getLastName());
-		   empresponse.setAddress(empPro.getAddress());
-		   empresponse.setDateOfBirth(empPro.getDateOfBirth());
-		   empresponse.setEmergencyContactName(empPro.getEmergencyContactName());
-		   empresponse.setEmergencyContactNumber(empPro.getEmergencyContactNumber());
-		   empresponse.setEmergencyContactRelationship(empPro.getEmergencyContactRelationship());
-		   empresponse.setId(empPro.getId());
-		   empresponse.setUserId(empPro.getUser().getId());
-		   empresponse.setPersonalEmail(empPro.getPersonalEmail());
-		   empresponse.setPhoneNumber(empPro.getPhoneNumber());
-		    
-		    return empresponse;
-		
-	}
-	
-	
-	
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
+        EmployeeProfile profile = employeeRepository.findByUserId(userId)
+                .orElseGet(EmployeeProfile::new);
+
+        if (profile.getId() == null) {
+            profile.setUser(user);
+        }
+
+        profile.setFirstName(profileRequest.getFirstName());
+        profile.setLastName(profileRequest.getLastName());
+        profile.setAddress(profileRequest.getAddress());
+        profile.setDateOfBirth(profileRequest.getDateOfBirth());
+        profile.setEmergencyContactName(profileRequest.getEmergencyContactName());
+        profile.setEmergencyContactNumber(profileRequest.getEmergencyContactNumber());
+        profile.setPersonalEmail(profileRequest.getPersonalEmail());
+        profile.setPhoneNumber(profileRequest.getPhoneNumber());
+        profile.setEmergencyContactRelationship(profileRequest.getEmergencyContactRelationship());
+
+        EmployeeProfile saved = employeeRepository.save(profile);
+
+        OnboardingStep step = stepRepository
+                .findByUserIdAndStepType(
+                        userId,
+                        OnboardingStepType.PROFILE)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Profile onboarding step not found"));
+
+        step.setCompleted(true);
+        step.setCompletedAt(LocalDateTime.now());
+
+        stepRepository.save(step);
+
+        // keep User.onboardingCompleted in sync
+        completionService.syncCompletion(userId);
+
+        return mapToResponse(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public EmployeeProfileResponse getProfile(Long userId) {
+
+        EmployeeProfile empprofile = employeeRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Profile not found"));
+
+        return mapToResponse(empprofile);
+    }
+
+    private EmployeeProfileResponse mapToResponse(EmployeeProfile empPro) {
+
+        EmployeeProfileResponse empresponse = new EmployeeProfileResponse();
+
+        empresponse.setFirstName(empPro.getFirstName());
+        empresponse.setLastName(empPro.getLastName());
+        empresponse.setAddress(empPro.getAddress());
+        empresponse.setDateOfBirth(empPro.getDateOfBirth());
+        empresponse.setEmergencyContactName(empPro.getEmergencyContactName());
+        empresponse.setEmergencyContactNumber(empPro.getEmergencyContactNumber());
+        empresponse.setEmergencyContactRelationship(empPro.getEmergencyContactRelationship());
+        empresponse.setId(empPro.getId());
+        empresponse.setUserId(empPro.getUser().getId());
+        empresponse.setPersonalEmail(empPro.getPersonalEmail());
+        empresponse.setPhoneNumber(empPro.getPhoneNumber());
+
+        return empresponse;
+    }
 }

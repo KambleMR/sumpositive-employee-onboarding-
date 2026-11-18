@@ -1,4 +1,3 @@
-
 package com.sumpositive.onboarding.controller;
 
 import com.sumpositive.onboarding.dto.EmployeeProfileRequest;
@@ -36,6 +35,21 @@ public class EmployeeProfileController {
                 .status(HttpStatus.CREATED)
                 .body(empResponse);
     }
+
+    // UPDATE EMPLOYEE PROFILE
+    @PutMapping("/update/{userId}")
+    public ResponseEntity<EmployeeProfileResponse> updateProfile(
+            @PathVariable Long userId,
+            @Valid @RequestBody EmployeeProfileRequest empRequest) {
+
+        EmployeeProfileResponse empResponse =
+                empService.saveProfile(userId, empRequest);
+
+        return ResponseEntity.ok(empResponse);
+    }
+    
+    
+ 
 
     // GET EMPLOYEE PROFILE
     @GetMapping("/get/{userId}")

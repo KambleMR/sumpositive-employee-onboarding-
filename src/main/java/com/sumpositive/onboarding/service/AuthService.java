@@ -18,6 +18,7 @@ import com.sumpositive.onboarding.entity.OnboardingStep;
 import com.sumpositive.onboarding.entity.User;
 import com.sumpositive.onboarding.enums.ChecklistItemType;
 import com.sumpositive.onboarding.enums.OnboardingStepType;
+import com.sumpositive.onboarding.enums.Role;
 import com.sumpositive.onboarding.repository.ChecklistItemRepository;
 import com.sumpositive.onboarding.repository.OnboardingStepRepository;
 import com.sumpositive.onboarding.repository.UserRepository;
@@ -75,11 +76,22 @@ public class AuthService {
         // Create user
         User user = new User();
 
+//        user.setMail(email);
+//
+//        user.setPasswordHash(
+//                passwordEncoder.encode(request.getPassword())
+//        );
+//
+//        user.setOnboardingCompleted(false);
+        
         user.setMail(email);
 
         user.setPasswordHash(
-                passwordEncoder.encode(request.getPassword())
+            passwordEncoder.encode(request.getPassword())
         );
+
+        // All public registrations are employees
+        user.setRole(Role.EMPLOYEE);
 
         user.setOnboardingCompleted(false);
 
@@ -121,14 +133,28 @@ public class AuthService {
         checklistRepository.saveAll(checklistItems);
 
         // Generate JWT
-        String token = jwtService.generateToken(email);
+//        String token = jwtService.generateToken(email);
+//
+//        return new AuthResponse(
+//                token,
+//                "Bearer",
+//                savedUser.getId(),
+//                savedUser.getMail(),
+//                jwtService.getExpirationMs()
+//        );
+        
+        String token = jwtService.generateToken(
+                email,
+                savedUser.getRole()
+        );
 
         return new AuthResponse(
                 token,
                 "Bearer",
                 savedUser.getId(),
                 savedUser.getMail(),
-                jwtService.getExpirationMs()
+                jwtService.getExpirationMs(),
+                savedUser.getRole().name()
         );
     }
 
@@ -162,15 +188,19 @@ public class AuthService {
             );
         }
 
-        // Generate JWT
-        String token = jwtService.generateToken(email);
+        
+        String token = jwtService.generateToken(
+                email,
+                user.getRole()
+        );
 
         return new AuthResponse(
                 token,
                 "Bearer",
                 user.getId(),
                 user.getMail(),
-                jwtService.getExpirationMs()
+                jwtService.getExpirationMs(),
+                user.getRole().name()
         );
     }
 }

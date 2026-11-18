@@ -1,6 +1,5 @@
+
 package com.sumpositive.onboarding.security;
-
-
 
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -33,7 +32,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         return org.springframework.security.core.userdetails.User
                 .withUsername(user.getMail())
                 .password(user.getPasswordHash())
-                .authorities("ROLE_EMPLOYEE")
+                .authorities("ROLE_" + user.getRole().name())
                 .build();
     }
 }

@@ -1,4 +1,3 @@
-
 package com.sumpositive.onboarding.service;
 
 import java.time.LocalDateTime;
@@ -17,10 +16,13 @@ import com.sumpositive.onboarding.repository.OnboardingStepRepository;
 public class OnboardingStepService {
 
     private final OnboardingStepRepository stepRepository;
+    private final OnboardingCompletionService completionService;
 
     public OnboardingStepService(
-            OnboardingStepRepository stepRepository) {
+            OnboardingStepRepository stepRepository,
+            OnboardingCompletionService completionService) {
         this.stepRepository = stepRepository;
+        this.completionService = completionService;
     }
 
     // GET ALL ONBOARDING STEPS
@@ -56,6 +58,9 @@ public class OnboardingStepService {
 
         OnboardingStep savedStep =
                 stepRepository.save(step);
+
+        // keep User.onboardingCompleted in sync
+        completionService.syncCompletion(userId);
 
         return mapToResponse(savedStep);
     }
